@@ -1,0 +1,487 @@
+<title>LG-TV optimieren</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Die besten Bild-, Ton-, Gaming- und Datenschutz-Einstellungen für LG-Fernseher (OLED, QNED, NanoCell, UHD) mit webOS – passend zu deinem Modell und Baujahr.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@112,600;112,800&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: eine Lesespalte; oben ein „Fernbedienungs“-Panel zur Modellwahl, darunter Kapitel mit abhakbaren Einstellungs-Zeilen. */
+:root {
+  --bg: #f2f3f5;
+  --surface: #ffffff;
+  --fg: #15181d;
+  --muted: #5a616d;
+  --line: #d9dce2;
+  --accent: #a8560a;        /* Bernstein wie die Standby-LED */
+  --accent-soft: #f6e6d4;
+  --ok: #1f7a4d;
+  --ok-soft: #dcefe4;
+  --path-bg: #eceef2;
+  --font-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #08090b; --surface: #121418; --fg: #e8eaee; --muted: #9aa1ad; --line: #262a31;
+    --accent: #f2a14a; --accent-soft: #2b1d0f; --ok: #5cc98f; --ok-soft: #12261b; --path-bg: #1a1d22;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #08090b; --surface: #121418; --fg: #e8eaee; --muted: #9aa1ad; --line: #262a31;
+  --accent: #f2a14a; --accent-soft: #2b1d0f; --ok: #5cc98f; --ok-soft: #12261b; --path-bg: #1a1d22;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 17px; line-height: 1.55;
+  margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 40px 80px; display: grid; gap: 40px; }
+h1, h2, h3 { font-family: var(--font-display); font-stretch: 112%; line-height: 1.1; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.1rem, 6vw, 3.4rem); font-weight: 800; letter-spacing: -0.01em; }
+h2 { font-size: 1.5rem; font-weight: 800; }
+h3 { font-size: 1.05rem; font-weight: 600; }
+p { margin: 0; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+.lede { color: var(--muted); max-width: 62ch; font-size: 1.1rem; }
+header { display: grid; gap: 14px; }
+
+/* Konfigurator */
+.config { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 22px; display: grid; gap: 18px; }
+.config label, .field-label { font-size: 0.82rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.model-row { display: grid; gap: 8px; }
+.model-row input {
+  font-family: var(--font-mono); font-size: 1.1rem; padding: 12px 14px; width: 100%;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--fg); text-transform: uppercase;
+}
+.model-row input:focus-visible, button:focus-visible, select:focus-visible, input[type=checkbox]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.model-hint { font-size: 0.92rem; color: var(--muted); min-height: 1.4em; }
+.model-hint strong { color: var(--ok); }
+.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.seg button {
+  font: inherit; font-size: 0.95rem; padding: 7px 12px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: transparent; color: var(--fg);
+}
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.summary-line { font-family: var(--font-mono); font-size: 0.85rem; color: var(--muted); border-top: 1px dashed var(--line); padding-top: 14px; }
+
+/* Fortschritt */
+.progress { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 10px; display: grid; gap: 6px; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.bar span { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+.progress-text { display: flex; justify-content: space-between; gap: 12px; font-size: 0.9rem; color: var(--muted); font-variant-numeric: tabular-nums; flex-wrap: wrap; }
+.progress-text button { font: inherit; background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0; text-decoration: underline; }
+
+/* Quick wins */
+.quick { display: grid; gap: 12px; }
+.quick ol { margin: 0; padding-left: 1.3em; display: grid; gap: 6px; }
+.quick li::marker { font-family: var(--font-display); font-weight: 800; color: var(--accent); }
+
+/* Kapitel */
+nav.toc { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.95rem; }
+nav.toc a { color: var(--fg); text-decoration: none; border-bottom: 1px solid var(--line); }
+nav.toc a:hover { border-color: var(--accent); }
+section.chapter { display: grid; gap: 14px; scroll-margin-top: 70px; }
+.chapter-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.chapter-count { font-family: var(--font-mono); font-size: 0.85rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.chapter-intro { color: var(--muted); max-width: 65ch; }
+.items { display: grid; border-top: 1px solid var(--line); }
+.item { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 4px 12px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.item input[type=checkbox] { width: 20px; height: 20px; margin: 3px 0 0; accent-color: var(--ok); cursor: pointer; }
+.item-body { display: grid; gap: 6px; min-width: 0; }
+.item-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; }
+.item-top label { font-weight: 600; cursor: pointer; }
+.value { font-family: var(--font-mono); font-size: 0.85rem; background: var(--accent-soft); color: var(--accent); padding: 2px 8px; border-radius: 6px; font-weight: 500; }
+.path { font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); background: var(--path-bg); padding: 6px 10px; border-radius: 6px; overflow-wrap: anywhere; }
+.why { font-size: 0.95rem; color: var(--muted); max-width: 68ch; }
+.item.done .item-top label { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--ok); }
+.item.done .value { background: var(--ok-soft); color: var(--ok); }
+.prio { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ok); }
+
+.note { font-size: 0.92rem; color: var(--muted); border-left: 3px solid var(--line); padding-left: 14px; max-width: 70ch; }
+footer { font-size: 0.85rem; color: var(--muted); display: grid; gap: 8px; border-top: 1px solid var(--line); padding-top: 20px; }
+@media (prefers-reduced-motion: reduce) { .bar span { transition: none; } html { scroll-behavior: auto; } }
+html { scroll-behavior: smooth; }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">webOS · OLED · QNED · NanoCell · UHD</span>
+    <h1>LG-TV optimieren</h1>
+    <p class="lede">Ab Werk sind LG-Fernseher auf Ladenbeleuchtung und Stromsparen eingestellt. Mit diesen Einstellungen bekommst du natürlichere Farben, saubere Bewegungen, weniger Input-Lag und weniger Datensammelei. Gib deine Modellnummer ein, dann passen sich Werte und Menüpfade an.</p>
+  </header>
+
+  <div class="config" aria-label="Dein Fernseher">
+    <div class="model-row">
+      <label for="model">Modellnummer (steht hinten auf dem Typenschild oder unter Einstellungen › Support › Info zu diesem Fernseher)</label>
+      <input id="model" type="text" placeholder="z. B. OLED55C47LA oder 50QNED816RE" autocomplete="off" spellcheck="false">
+      <p class="model-hint" id="model-hint" aria-live="polite">Noch keine Modellnummer eingegeben – unten von Hand wählen.</p>
+    </div>
+    <div class="choices">
+      <div>
+        <span class="field-label" id="lbl-type">Bildschirm</span>
+        <div class="seg" role="group" aria-labelledby="lbl-type" data-key="oled">
+          <button type="button" data-val="1">OLED</button>
+          <button type="button" data-val="0">LCD (QNED, NanoCell, UHD)</button>
+        </div>
+      </div>
+      <div>
+        <span class="field-label" id="lbl-year">Baujahr / webOS</span>
+        <div class="seg" role="group" aria-labelledby="lbl-year" data-key="year">
+          <button type="button" data-val="2020">2020</button>
+          <button type="button" data-val="2021">2021</button>
+          <button type="button" data-val="2022">2022</button>
+          <button type="button" data-val="2023">2023</button>
+          <button type="button" data-val="2024">2024</button>
+          <button type="button" data-val="2025">2025</button>
+        </div>
+      </div>
+      <div>
+        <span class="field-label" id="lbl-room">Raum beim Fernsehen</span>
+        <div class="seg" role="group" aria-labelledby="lbl-room" data-key="dark">
+          <button type="button" data-val="1">eher dunkel</button>
+          <button type="button" data-val="0">eher hell</button>
+        </div>
+      </div>
+    </div>
+    <p class="summary-line" id="summary"></p>
+  </div>
+
+  <div class="progress" aria-live="polite">
+    <div class="bar"><span id="bar"></span></div>
+    <div class="progress-text"><span id="progress-label">0 von 0 erledigt</span><button type="button" id="reset">Haken zurücksetzen</button></div>
+  </div>
+
+  <section class="quick">
+    <h2>Die fünf Schritte mit der größten Wirkung</h2>
+    <ol id="quick"></ol>
+    <p class="note">So kommst du ins Menü: Zahnrad-Taste auf der Fernbedienung drücken, dann <em>Alle Einstellungen</em>. Bildwerte gelten pro Eingang (HDMI 1, Netflix-App usw.) und getrennt für SDR, HDR und Dolby Vision. Stell sie also einmal bei laufendem HDR-Film neu ein. Die Bezeichnungen können je nach Software-Stand leicht abweichen.</p>
+  </section>
+
+  <nav class="toc" id="toc" aria-label="Kapitel"></nav>
+  <div id="chapters" style="display:grid;gap:44px"></div>
+
+  <footer>
+    <p>Inoffizielle Anleitung, nicht von LG Electronics. Die Werte sind bewährte Ausgangspunkte für ein natürliches Bild und ersetzen keine Messung mit einem Kalibriergerät. Geschmack geht vor: Wenn dir etwas zu dunkel oder zu warm vorkommt, gib deinen Augen ein paar Tage Zeit und passe dann an.</p>
+    <p>Deine Haken werden nur in diesem Browser gespeichert.</p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var STORE = "lgtv-opt-v1";
+  var state = { oled: 1, year: 2024, dark: 1, model: "", done: {} };
+  try { var saved = JSON.parse(localStorage.getItem(STORE) || "null"); if (saved) for (var k in saved) state[k] = saved[k]; } catch (e) {}
+  function save() { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch (e) {} }
+
+  var WEBOS = { 2020: "webOS 5", 2021: "webOS 6", 2022: "webOS 22", 2023: "webOS 23", 2024: "webOS 24", 2025: "webOS 25" };
+
+  function ctx() {
+    var y = state.year;
+    return {
+      oled: !!state.oled, dark: !!state.dark, year: y,
+      bild: y >= 2023 ? "Bild › Erweiterte Einstellungen" : "Bild › Bildmodus-Einstellungen",
+      sys: y >= 2022 ? "Allgemein › System" : "Allgemein",
+      extra: y >= 2022 ? "Allgemein › System › Zusätzliche Einstellungen" : "Allgemein › Zusätzliche Einstellungen",
+      dev: y >= 2022 ? "Allgemein › Geräte › HDMI-Einstellungen" : "Allgemein › HDMI ULTRA HD Deep Colour"
+    };
+  }
+  function P(s) { return "Einstellungen › " + s; }
+
+  /* ---------- Einstellungen ---------- */
+  var CHAPTERS = [
+    { id: "bild", title: "Bild (SDR: TV, Streaming in HD)",
+      intro: "Ziel ist ein Bild, wie es im Studio gemastert wurde: neutrale Farben, keine künstliche Schärfe, keine Rechentricks.",
+      items: [
+        { id: "mode", prio: 1, name: "Bildmodus",
+          val: function (c) { return c.dark ? "Filmmaker Mode" : (c.year >= 2021 ? "ISF Expert (Heller Raum)" : "ISF Experte (heller Raum)"); },
+          path: function (c) { return P(c.year >= 2023 ? "Bild › Bildmodus auswählen" : "Bild › Bildmodus-Einstellungen › Bildmodus"); },
+          why: function (c) { return c.dark ? "Filmmaker Mode schaltet fast alle Nachbearbeitung ab und zeigt Farben und Bewegung so, wie Regie und Coloristen es vorgesehen haben. In hellen Räumen ist „ISF Expert (Heller Raum)“ die hellere, trotzdem genaue Alternative." : "„ISF Expert (Heller Raum)“ ist ab Werk genau, aber heller als Filmmaker Mode. Abends im dunklen Raum lieber auf Filmmaker Mode wechseln."; } },
+        { id: "light", prio: 1,
+          name: function (c) { return c.oled ? (c.year >= 2021 ? "OLED-Pixelhelligkeit" : "OLED-Licht") : "Hintergrundbeleuchtung"; },
+          val: function (c) { return c.oled ? (c.dark ? "35–55" : "80–100") : (c.dark ? "30–50" : "80–100"); },
+          path: function (c) { return P(c.bild + (c.year >= 2023 ? " › Helligkeit" : "")); },
+          why: function () { return "Steuert nur die Gesamthelligkeit, nicht die Bildgenauigkeit. Im dunklen Raum schont ein niedriger Wert die Augen und beim OLED auch das Panel. Wirkt erst nach dem Ausschalten der Energiesparfunktionen (siehe unten) zuverlässig."; } },
+        { id: "contrast", name: "Kontrast",
+          val: function (c) { return c.oled ? "85 (Werkswert)" : "85–90"; },
+          path: function (c) { return P(c.bild + (c.year >= 2023 ? " › Helligkeit" : "")); },
+          why: function () { return "Höhere Werte lassen helle Details wie Wolken oder Hemden ausfressen."; } },
+        { id: "black", name: "Schwarzwert (Menüname: Bildschirmhelligkeit bzw. Helligkeit)", val: function () { return "50"; },
+          path: function (c) { return P(c.bild + (c.year >= 2023 ? " › Helligkeit" : "")); },
+          why: function () { return "50 ist für normale Videosignale korrekt. Werte darüber machen Schwarz grau, Werte darunter verschlucken Details in Schatten."; } },
+        { id: "gamma", name: "Gamma", val: function (c) { return c.dark ? "BT.1886" : "2.2"; },
+          path: function (c) { return P(c.bild + (c.year >= 2023 ? " › Helligkeit" : "")); },
+          why: function () { return "BT.1886 ist der Standard für dunkle Räume. 2.2 hebt dunkle Bildbereiche leicht an und ist bei Tageslicht angenehmer."; } },
+        { id: "dyncontrast", name: "Dynamischer Kontrast", val: function () { return "Aus"; },
+          path: function (c) { return P(c.bild + (c.year >= 2023 ? " › Helligkeit" : "")); },
+          why: function () { return "Pumpt Kontrast künstlich auf und verschluckt Schattenzeichnung."; } },
+        { id: "temp", prio: 1, name: "Farbtemperatur",
+          val: function (c) { return c.year >= 2022 ? "Warm 50" : "Warm 2"; },
+          path: function (c) { return P(c.bild + (c.year >= 2023 ? " › Farbe" : "")); },
+          why: function () { return "Entspricht dem Weißpunkt D65, auf den Filme und Serien gemastert werden. Wirkt anfangs gelblich, weil das Auge an das kühle Ladenbild gewöhnt ist. Nach ein paar Tagen wirkt es natürlich."; } },
+        { id: "gamut", name: "Farbraum", val: function () { return "Automatisch (Auto erkennen)"; },
+          path: function (c) { return P(c.bild + (c.year >= 2023 ? " › Farbe" : "")); },
+          why: function () { return "„Erweitert“ bzw. „Breit“ übersättigt normale Inhalte, Haut wirkt dann sonnenverbrannt."; } },
+        { id: "color", name: "Farbe & Farbton", val: function () { return "50 / 0"; },
+          path: function (c) { return P(c.bild + (c.year >= 2023 ? " › Farbe" : "")); },
+          why: function () { return "Neutrale Werkswerte im Filmmaker- und ISF-Modus. Nur ändern, wenn du mit Messgerät kalibrierst."; } },
+        { id: "sharp", name: "Schärfe & Superauflösung", val: function (c) { return c.year >= 2023 ? "Schärfe 0 · Superauflösung Aus" : "Schärfe 0–10 · Superauflösung Aus"; },
+          path: function (c) { return P(c.bild + (c.year >= 2023 ? " › Klarheit" : "")); },
+          why: function () { return "Künstliche Schärfe erzeugt helle Säume um Kanten. Bei schlechten Quellen wie altem Fernsehen darf Superauflösung auf „Niedrig“ stehen."; } },
+        { id: "noise", name: "Rauschunterdrückung & MPEG-Rauschunterdrückung", val: function () { return "Aus"; },
+          path: function (c) { return P(c.bild + (c.year >= 2023 ? " › Klarheit" : "")); },
+          why: function () { return "Glättet bei guten Quellen Details und Filmkorn weg. Nur bei stark komprimiertem Antennen- oder Kabelfernsehen auf „Niedrig“ stellen."; } },
+        { id: "gradation", name: "Glatte Abstufung", val: function () { return "Niedrig"; },
+          path: function (c) { return P(c.bild + (c.year >= 2023 ? " › Klarheit" : "")); },
+          why: function () { return "Entfernt Farbstufen (Banding) in Himmeln und dunklen Verläufen von Streaming, ohne Details zu verwischen."; } },
+        { id: "ai", prio: 1, name: "KI-Bild: AI Picture Pro, AI-Helligkeit, Genre-Erkennung", val: function () { return "Aus"; },
+          path: function (c) { return P(c.year >= 2023 ? "Bild › KI-Bildeinstellungen" : "Bild › Bildmodus-Einstellungen › AI Picture Pro"); },
+          why: function () { return "Diese Automatiken verändern Helligkeit, Schärfe und Farben laufend je nach Szene. Das wirkt im Laden beeindruckend, verfälscht aber das Bild und lässt die Helligkeit pumpen."; } },
+        { id: "eco", prio: 1, name: function (c) { return c.year >= 2023 ? "Energiesparen & Umgebungslichtsensor" : "Energiesparschritt"; }, val: function () { return "Aus"; },
+          path: function (c) { return P(c.year >= 2023 ? "Allgemein › Energie sparen" : "Bild › Energie sparen"); },
+          why: function () { return "Der Fernseher dimmt sonst je nach Raumlicht oder Bildinhalt nach. Das Bild wird dunkel und schwankt, und deine Helligkeitseinstellung wirkt nicht mehr."; } },
+        { id: "eyecomfort", name: "Augenkomfort-Modus", val: function () { return "Aus"; },
+          path: function (c) { return P(c.bild + (c.year >= 2023 ? " › Farbe" : "")); },
+          why: function () { return "Färbt das Bild zusätzlich gelb ein. Die Farbtemperatur „Warm 50“ ist schon augenfreundlich."; } }
+      ] },
+
+    { id: "hdr", title: "HDR & Dolby Vision",
+      intro: "Spiele einen HDR- oder Dolby-Vision-Inhalt ab (z. B. bei Netflix oder Disney+), bevor du diese Werte setzt. Der Fernseher speichert HDR-Einstellungen getrennt.",
+      items: [
+        { id: "hdrmode", prio: 1, name: "Bildmodus bei HDR / Dolby Vision",
+          val: function (c) { return c.dark ? "Filmmaker Mode bzw. Dolby Vision Kino Home" : "Kino (HDR) bzw. Dolby Vision Kino Home"; },
+          path: function (c) { return P(c.year >= 2023 ? "Bild › Bildmodus auswählen" : "Bild › Bildmodus-Einstellungen › Bildmodus"); },
+          why: function () { return "„Dolby Vision Dunkel“ ist für komplett abgedunkelte Räume gedacht, „Kino Home“ ist heller und trotzdem genau. Lebhaft und Standard übertreiben Farben."; } },
+        { id: "hdrlight", name: function (c) { return c.oled ? "OLED-Pixelhelligkeit (HDR)" : "Hintergrundbeleuchtung (HDR)"; }, val: function () { return "100"; },
+          path: function (c) { return P(c.bild + (c.year >= 2023 ? " › Helligkeit" : "")); },
+          why: function () { return "HDR braucht die volle Leuchtkraft für Glanzlichter. Die Helligkeit des Gesamtbildes steuert das HDR-Signal selbst."; } },
+        { id: "tonemap", name: "Dynamisches Tone Mapping",
+          val: function (c) { return c.dark ? "Aus (nur HDR10)" : "Ein (nur HDR10)"; },
+          path: function (c) { return P(c.bild + (c.year >= 2023 ? " › Helligkeit" : "")); },
+          why: function () { return "Hebt dunkle HDR10-Szenen an. Genauer ist „Aus“, heller und für Tageslicht oft angenehmer ist „Ein“. Bei Dolby Vision regeln die Metadaten das automatisch."; } },
+        { id: "dviq", name: "Umgebungslicht-Kompensation / Dolby Vision IQ", val: function (c) { return c.dark ? "Aus" : "Ein"; },
+          path: function (c) { return P(c.year >= 2023 ? "Allgemein › Energie sparen" : c.bild); },
+          why: function () { return "Passt HDR an das Raumlicht an. Bei wechselndem Tageslicht praktisch, im dunklen Heimkino nicht nötig."; } }
+      ] },
+
+    { id: "motion", title: "Bewegung",
+      intro: "Hier entscheidet sich, ob Filme wie Kino aussehen oder wie eine Seifenoper. Für Sport gelten andere Werte.",
+      items: [
+        { id: "trumotion", prio: 1, name: "TruMotion",
+          val: function () { return "Filme: Aus oder Kino-Clear · Sport: Benutzer (De-Judder 3, De-Blur 6)"; },
+          path: function (c) { return P(c.bild + (c.year >= 2023 ? " › Klarheit › TruMotion" : " › TruMotion")); },
+          why: function () { return "Zwischenbildberechnung macht Filme unnatürlich flüssig (Seifenopern-Effekt). „Kino-Clear“ glättet nur das Ruckeln bei langsamen Kameraschwenks. Bei Fußball sorgt ein moderater Benutzer-Wert für scharfe Bewegungen ohne Artefakte."; } },
+        { id: "omp", name: function (c) { return c.oled ? "OLED Motion / Motion Pro" : "Motion Pro / LED-Bewegungsklarheit"; }, val: function () { return "Aus"; },
+          path: function (c) { return P(c.bild + (c.year >= 2023 ? " › Klarheit" : " › TruMotion")); },
+          why: function () { return "Fügt schwarze Zwischenbilder ein. Das macht Bewegungen schärfer, kostet aber viel Helligkeit und kann flimmern."; } },
+        { id: "realcinema", name: "Echtes Kino (Real Cinema)", val: function () { return "Ein"; },
+          path: function (c) { return P(c.bild + (c.year >= 2023 ? " › Klarheit" : "")); },
+          why: function () { return "Spielt 24p-Filme in einem passenden Vielfachen der Bildrate ab und verhindert so ungleichmäßiges Ruckeln."; } }
+      ] },
+
+    { id: "gaming", title: "Gaming (PlayStation, Xbox, PC)",
+      intro: "LG-Fernseher gehören zu den besten Gaming-TVs, aber viele Funktionen müssen erst eingeschaltet werden. Konsole an einem HDMI-2.1-Anschluss betreiben (beim OLED meist alle vier, bei vielen LCD-Modellen nur HDMI 3 und 4).",
+      items: [
+        { id: "deepcolor", prio: 1, name: "HDMI Ultra HD Deep Colour", val: function () { return "Ein für den Konsolen-/PC-Anschluss"; },
+          path: function (c) { return P(c.dev + (c.year >= 2022 ? " › HDMI ULTRA HD Deep Colour" : "")); },
+          why: function () { return "Ohne diese Option gibt es kein 4K mit 120 Hz und kein volles HDR über HDMI. Die Konsole erkennt sonst nur einen Teil der Fähigkeiten."; } },
+        { id: "gamemode", prio: 1, name: function (c) { return c.year >= 2021 ? "Spiel-Optimierer (Game Optimizer)" : "Bildmodus „Spiel“ + Sofortige Spielreaktion"; },
+          val: function (c) { return c.year >= 2021 ? "Ein, Eingangsverzögerung verhindern: Boost" : "Ein"; },
+          path: function (c) { return P(c.year >= 2021 ? "Allgemein › Spiel-Optimierer" : "Bild › Bildmodus-Einstellungen › Bildmodus / Allgemein › Sofortige Spielreaktion"); },
+          why: function () { return "Schaltet die Bildverarbeitung ab, die Verzögerung kostet. Der Input-Lag sinkt so auf rund 10 ms bei 60 Hz und rund 5 ms bei 120 Hz. Mit „Boost“ wird er bei 60-Hz-Spielen zusätzlich halbiert."; } },
+        { id: "vrr", name: "VRR, G-Sync & FreeSync Premium", val: function () { return "Ein"; },
+          path: function (c) { return P(c.year >= 2021 ? "Allgemein › Spiel-Optimierer" : "Allgemein › Sofortige Spielreaktion"); },
+          why: function () { return "Verhindert Bildreißen (Tearing) und Mikroruckler bei schwankender Bildrate. VRR sollte danach auch in der Konsole aktiviert werden."; } },
+        { id: "allm", name: "ALLM (automatischer Spielmodus)", val: function () { return "Ein"; },
+          path: function (c) { return P(c.year >= 2021 ? "Allgemein › Spiel-Optimierer" : "Allgemein › Sofortige Spielreaktion"); },
+          why: function () { return "Der Fernseher wechselt automatisch in den Spielmodus, sobald die Konsole ein Spiel startet, und zurück, wenn du Filme schaust."; } },
+        { id: "hgig", prio: 1, name: "HDR-Tone-Mapping beim Spielen", val: function () { return "HGiG"; },
+          path: function (c) { return P(c.bild + (c.year >= 2023 ? " › Helligkeit › Dynamisches Tone Mapping" : " › Dynamisches Tone Mapping")); },
+          why: function () { return "Mit HGiG übernimmt die Konsole das Tone Mapping. Danach in der Konsole die HDR-Kalibrierung durchlaufen (PS5: Bildschirm und Video › HDR anpassen; Xbox: App „HDR-Spielkalibrierung“). So bleiben helle Spielszenen detailreich."; } },
+        { id: "pc", name: "PC am TV: Eingangssymbol", val: function () { return "auf „PC“ stellen"; },
+          path: function () { return "Home-Taste › Eingänge › Stift-Symbol am HDMI-Eingang › Symbol"; },
+          why: function () { return "Erst damit zeigt der Fernseher volle Farbauflösung (4:4:4). Schrift am Desktop wirkt sonst farbig gesäumt."; } }
+      ] },
+
+    { id: "ton", title: "Ton",
+      intro: "Die Werte unterscheiden sich, je nachdem ob der Ton aus den TV-Lautsprechern kommt oder aus einer Soundbar bzw. einem AV-Receiver.",
+      items: [
+        { id: "soundmode", name: "Soundmodus (TV-Lautsprecher)", val: function () { return "Standard oder Kino · AI Sound Pro: Aus"; },
+          path: function () { return P("Ton › Soundmodus-Einstellungen"); },
+          why: function () { return "AI Sound Pro simuliert virtuellen Raumklang und verändert Stimmen. Wenn Dialoge schlecht verständlich sind, hilft der Modus „Klare Stimme“ mehr."; } },
+        { id: "earc", name: "Soundbar/Receiver: Tonausgabe & eARC", val: function () { return "HDMI (ARC) · eARC-Unterstützung: Ein"; },
+          path: function () { return P("Ton › Tonausgabe / Ton › Zusätzliche Einstellungen"); },
+          why: function () { return "eARC überträgt verlustfreien Ton inklusive Dolby Atmos aus Apps an die Soundbar. Soundbar am HDMI-Eingang mit „eARC“-Beschriftung anschließen."; } },
+        { id: "passthrough", name: "Digitale Tonausgabe", val: function () { return "Pass Through"; },
+          path: function () { return P("Ton › Zusätzliche Einstellungen › Digitale Tonausgabe"); },
+          why: function () { return "Gibt den Ton unverändert weiter, damit die Soundbar Dolby Digital Plus, Atmos und DTS selbst dekodiert."; } },
+        { id: "simplink", name: "SIMPLINK (HDMI-CEC)", val: function () { return "Ein"; },
+          path: function (c) { return P(c.year >= 2022 ? "Allgemein › Geräte › HDMI-Einstellungen › SIMPLINK" : "Allgemein › SIMPLINK (HDMI-CEC)"); },
+          why: function () { return "Damit steuert die TV-Fernbedienung die Lautstärke der Soundbar, und alle Geräte schalten sich gemeinsam ein und aus."; } },
+        { id: "avsync", name: "AV-Sync-Anpassung", val: function () { return "nur bei Bedarf"; },
+          path: function () { return P("Ton › Zusätzliche Einstellungen › AV-Sync-Anpassung"); },
+          why: function () { return "Wenn Lippen und Ton nicht zusammenpassen: hier in kleinen Schritten korrigieren, am besten mit einem Nachrichtensprecher als Test."; } }
+      ] },
+
+    { id: "privacy", title: "Datenschutz & Werbung",
+      intro: "webOS sammelt standardmäßig Daten darüber, was du schaust – auch von angeschlossenen Geräten. Das kannst du abschalten, ohne dass Apps oder Updates aufhören zu funktionieren.",
+      items: [
+        { id: "liveplus", prio: 1, name: "Live Plus", val: function () { return "Aus"; },
+          path: function (c) { return P(c.extra + " › Live Plus"); },
+          why: function () { return "Live Plus erkennt per Bildanalyse (ACR), was auf dem Bildschirm läuft, auch von Konsole oder Receiver, und nutzt das für Werbung und Empfehlungen."; } },
+        { id: "agreements", prio: 1, name: "Benutzervereinbarungen", val: function () { return "Anzeigeinformationen, interessenbezogene Werbung, Sprachinformationen: abwählen"; },
+          path: function (c) { return P(c.year >= 2023 ? "Support › Datenschutz und Bedingungen › Benutzervereinbarungen" : "Allgemein › Info zu diesem Fernseher › Benutzervereinbarungen"); },
+          why: function () { return "Hier widerrufst du die Einwilligungen, die bei der Ersteinrichtung oft pauschal angehakt wurden. Die Nutzungsbedingungen selbst müssen akzeptiert bleiben, sonst funktionieren Apps nicht."; } },
+        { id: "adtrack", name: "Werbe-Tracking einschränken", val: function () { return "Ein"; },
+          path: function (c) { return P(c.extra + " › Werbung"); },
+          why: function () { return "Setzt die Werbe-ID zurück und verhindert personalisierte Werbung über Apps hinweg."; } },
+        { id: "homepromo", name: "Home-Promotion & Inhaltsempfehlungen", val: function () { return "Aus"; },
+          path: function (c) { return P(c.extra + " › Home-Einstellungen"); },
+          why: function () { return "Entfernt den großen Werbebanner und gesponserte Kacheln vom Startbildschirm. Der Startbildschirm wird dadurch auch schneller."; } }
+      ] },
+
+    { id: "oledcare", title: "OLED-Pflege", onlyOled: true,
+      intro: "OLED-Panels altern bei dauerhaft gleichen Bildinhalten ungleichmäßig (Einbrennen). Mit diesen Einstellungen ist das bei normaler Nutzung kein Thema.",
+      items: [
+        { id: "refresher", prio: 1, name: "Pixel-Auffrischung automatisch laufen lassen", val: function () { return "TV nicht vom Strom trennen"; },
+          path: function (c) { return P(c.year >= 2022 ? "Allgemein › OLED Care › Gerätepflege › OLED-Panelpflege" : "Bild › Zusätzliche Einstellungen › OLED-Panel-Einstellungen"); },
+          why: function () { return "Nach dem Ausschalten mit der Fernbedienung läuft ein kurzer Pflegezyklus, nach etwa 2000 Stunden ein langer von rund einer Stunde. Deshalb Steckdosenleiste nicht ausschalten. Die manuelle Pixel-Auffrischung nur bei sichtbaren Problemen starten, höchstens einmal pro Jahr."; } },
+        { id: "shift", name: "Bildverschiebung", val: function () { return "Ein"; },
+          path: function (c) { return P(c.year >= 2022 ? "Allgemein › OLED Care › Gerätepflege › OLED-Panelpflege" : "Bild › Zusätzliche Einstellungen › OLED-Panel-Einstellungen"); },
+          why: function () { return "Verschiebt das Bild unmerklich um wenige Pixel, damit statische Elemente nicht immer dieselben Pixel belasten."; } },
+        { id: "logo", name: "Logo-Helligkeitsanpassung", val: function () { return "Niedrig"; },
+          path: function (c) { return P(c.year >= 2022 ? "Allgemein › OLED Care › Gerätepflege › OLED-Panelpflege" : "Bild › Zusätzliche Einstellungen › OLED-Panel-Einstellungen"); },
+          why: function () { return "Dimmt Senderlogos und HUD-Elemente in Spielen leicht, ohne dass es beim Schauen auffällt."; } },
+        { id: "habits", name: "Nutzungsgewohnheiten", val: function () { return "Abwechslung statt Dauer-Standbild"; },
+          path: function () { return "kein Menüpunkt"; },
+          why: function () { return "Nachrichtensender mit Laufband nicht stundenlang täglich laufen lassen und Spiele bei langen Pausen pausieren. Der Bildschirmschoner springt nach 2 Minuten Standbild automatisch an."; } }
+      ] },
+
+    { id: "system", title: "System, Strom & Updates",
+      items: [
+        { id: "update", prio: 1, name: "Automatische Software-Updates", val: function () { return "Ein"; },
+          path: function (c) { return P(c.year >= 2023 ? "Support › Softwareaktualisierung" : "Allgemein › Info zu diesem Fernseher"); },
+          why: function () { return "LG verbessert per Update regelmäßig HDMI-2.1-Funktionen, Tone Mapping und Fehler. Dabei wird kein Bildwert zurückgesetzt."; } },
+        { id: "quickstart", name: "Schnellstart+", val: function () { return "Aus, wenn dir Strom wichtiger ist als 3 Sekunden"; },
+          path: function (c) { return P(c.sys + " › Zusätzliche Einstellungen"); },
+          why: function () { return "Mit Schnellstart+ ist der Fernseher sofort da, braucht im Standby aber deutlich mehr Strom. Ohne die Funktion dauert das Einschalten nur wenige Sekunden länger."; } },
+        { id: "autooff", name: "Automatisch ausschalten", val: function () { return "nach 4 Stunden ohne Bedienung"; },
+          path: function () { return P("Allgemein › Energie sparen / Allgemein › Timer"); },
+          why: function () { return "Schaltet den Fernseher ab, wenn du eingeschlafen bist. Das spart Strom und schont beim OLED das Panel."; } },
+        { id: "lan", name: "Netzwerk für 4K-Streaming", val: function () { return "LAN-Kabel, sonst WLAN mit 5 GHz"; },
+          path: function () { return P("Allgemein › Netzwerk"); },
+          why: function () { return "4K-HDR-Streams brauchen stabil 25 Mbit/s. Ein Kabel verhindert, dass Apps auf schlechtere Qualität herunterschalten."; } },
+        { id: "restart", name: "Bei Rucklern oder Hängern", val: function () { return "1 Minute vom Strom trennen"; },
+          path: function () { return "Netzstecker ziehen, 60 Sekunden warten"; },
+          why: function () { return "Beim normalen Ausschalten geht webOS nur in den Standby. Ein echter Neustart leert den Arbeitsspeicher. Das hilft, wenn Apps träge werden."; } }
+      ] }
+  ];
+
+  function val(x, c) { return typeof x === "function" ? x(c) : x; }
+
+  /* ---------- Modellnummer erkennen ---------- */
+  var OLED_YEAR = { X: 2020, "1": 2021, "2": 2022, "3": 2023, "4": 2024, "5": 2025 };
+  var LCD_YEAR = { N: 2020, P: 2021, Q: 2022, R: 2023, T: 2024, A: 2025 };
+  function parseModel(raw) {
+    var m = (raw || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (!m) return null;
+    var o = m.match(/OLED(\d{2})([A-Z])([X1-9])/);
+    if (o && OLED_YEAR[o[3]]) return { oled: 1, year: OLED_YEAR[o[3]], label: "OLED, " + o[1] + " Zoll, Serie " + o[2] + o[3] };
+    var q = m.match(/(\d{2})(QNED|NANO)(\d+)([NPQRTA])/);
+    if (q) return { oled: 0, year: LCD_YEAR[q[4]], label: (q[2] === "QNED" ? "QNED" : "NanoCell") + ", " + q[1] + " Zoll" };
+    var u = m.match(/(\d{2})U([NPQRTA])(\d)/);
+    if (u) return { oled: 0, year: LCD_YEAR[u[2]], label: "UHD-LCD, " + u[1] + " Zoll" };
+    return { unknown: true };
+  }
+
+  /* ---------- Rendern ---------- */
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (ch) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]; }); }
+
+  function visibleChapters(c) { return CHAPTERS.filter(function (ch) { return !ch.onlyOled || c.oled; }); }
+
+  function render() {
+    var c = ctx();
+    document.querySelectorAll(".seg").forEach(function (g) {
+      var key = g.getAttribute("data-key");
+      g.querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-val") === String(state[key]))); });
+    });
+    $("summary").textContent = (c.oled ? "OLED" : "LCD") + " · Baujahr " + c.year + " · " + WEBOS[c.year] + " · " + (c.dark ? "dunkler Raum" : "heller Raum");
+
+    var chs = visibleChapters(c), html = "", toc = "", quick = [];
+    chs.forEach(function (ch) {
+      toc += '<a href="#' + ch.id + '">' + esc(ch.title.replace(/ \(.*\)$/, "")) + "</a>";
+      var rows = "";
+      ch.items.forEach(function (it) {
+        var key = ch.id + "." + it.id, done = !!state.done[key], name = val(it.name, c), v = val(it.val, c);
+        if (it.prio && quick.length < 5 && ["mode", "ai", "eco", "temp", "liveplus"].indexOf(it.id) > -1) quick.push({ name: name, v: v, ch: ch.id });
+        rows += '<div class="item' + (done ? " done" : "") + '">' +
+          '<input type="checkbox" id="cb-' + key.replace(".", "-") + '" data-key="' + key + '"' + (done ? " checked" : "") + ">" +
+          '<div class="item-body"><div class="item-top"><label for="cb-' + key.replace(".", "-") + '">' + esc(name) + "</label>" +
+          '<span class="value">' + esc(v) + "</span>" + (it.prio ? '<span class="prio">wichtig</span>' : "") + "</div>" +
+          '<div class="path">' + esc(val(it.path, c)) + "</div>" +
+          '<p class="why">' + esc(val(it.why, c)) + "</p></div></div>";
+      });
+      html += '<section class="chapter" id="' + ch.id + '"><div class="chapter-head"><h2>' + esc(ch.title) + '</h2><span class="chapter-count" data-count="' + ch.id + '"></span></div>' +
+        (ch.intro ? '<p class="chapter-intro">' + esc(ch.intro) + "</p>" : "") + '<div class="items">' + rows + "</div></section>";
+    });
+    $("chapters").innerHTML = html;
+    $("toc").innerHTML = toc;
+    $("quick").innerHTML = quick.map(function (q) { return '<li><a href="#' + q.ch + '" style="color:inherit">' + esc(q.name) + "</a>: <strong>" + esc(q.v) + "</strong></li>"; }).join("");
+    updateProgress();
+  }
+
+  function updateProgress() {
+    var c = ctx(), total = 0, doneN = 0;
+    visibleChapters(c).forEach(function (ch) {
+      var t = ch.items.length, d = ch.items.filter(function (it) { return state.done[ch.id + "." + it.id]; }).length;
+      total += t; doneN += d;
+      var el = document.querySelector('[data-count="' + ch.id + '"]');
+      if (el) el.textContent = d + " / " + t;
+    });
+    $("bar").style.width = (total ? (doneN / total) * 100 : 0) + "%";
+    $("progress-label").textContent = doneN + " von " + total + " Einstellungen erledigt" + (doneN === total && total ? " – fertig!" : "");
+  }
+
+  /* ---------- Events ---------- */
+  document.querySelectorAll(".seg").forEach(function (g) {
+    g.addEventListener("click", function (e) {
+      var b = e.target.closest("button"); if (!b) return;
+      state[g.getAttribute("data-key")] = Number(b.getAttribute("data-val"));
+      save(); render();
+    });
+  });
+  $("chapters").addEventListener("change", function (e) {
+    var cb = e.target; if (!cb.matches('input[type="checkbox"]')) return;
+    var key = cb.getAttribute("data-key");
+    if (cb.checked) state.done[key] = 1; else delete state.done[key];
+    cb.closest(".item").classList.toggle("done", cb.checked);
+    save(); updateProgress();
+  });
+  $("reset").addEventListener("click", function () { state.done = {}; save(); render(); });
+
+  var modelInput = $("model");
+  modelInput.value = state.model || "";
+  function onModel() {
+    state.model = modelInput.value.trim();
+    var r = parseModel(state.model), hint = $("model-hint");
+    if (!r) hint.textContent = "Noch keine Modellnummer eingegeben – unten von Hand wählen.";
+    else if (r.unknown) hint.textContent = "Modell nicht erkannt. Bitte Bildschirmtyp und Baujahr unten von Hand wählen.";
+    else {
+      state.oled = r.oled; state.year = r.year;
+      hint.innerHTML = "<strong>Erkannt:</strong> " + esc(r.label) + ", Baujahr " + r.year + " (" + WEBOS[r.year] + ")";
+    }
+    save(); render();
+  }
+  modelInput.addEventListener("input", onModel);
+  if (state.model) onModel(); else render();
+})();
+</script>
