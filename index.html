@@ -398,6 +398,8 @@ html { scroll-behavior: smooth; }
   function parseModel(raw) {
     var m = (raw || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
     if (!m) return null;
+    var cs = m.match(/OLED(\d{2})CS\d/);
+    if (cs) return { oled: 1, year: 2022, label: "OLED, " + cs[1] + " Zoll, Serie CS (technisch wie die C2)" };
     var o = m.match(/OLED(\d{2})([A-Z])([X1-9])/);
     if (o && OLED_YEAR[o[3]]) return { oled: 1, year: OLED_YEAR[o[3]], label: "OLED, " + o[1] + " Zoll, Serie " + o[2] + o[3] };
     var q = m.match(/(\d{2})(QNED|NANO)(\d+)([NPQRTA])/);
