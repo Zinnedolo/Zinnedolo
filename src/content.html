@@ -322,6 +322,33 @@ def send_wol(mac: str, ip: str | None = None) -&gt; None:
                     pass
 
 
+def collect_macs(data) -&gt; list[str]:
+    """Sammelt alle MAC-Adressen aus den Netzwerkdaten des TVs (LAN und WLAN).
+
+    Der TV meldet meist beide Adressen, auch wenn nur eine Schnittstelle benutzt wird.
+    Wake-on-LAN geht deshalb an beide, sonst trifft es bei WLAN-Betrieb die falsche.
+    """
+    macs: list[str] = []
+    if isinstance(data, dict):
+        for k, v in data.items():
+            if k.lower() == "macaddress" and isinstance(v, str) and v and v not in macs:
+                macs.append(v)
+            else:
+                macs += [m for m in collect_macs(v) if m not in macs]
+    elif isinstance(data, list):
+        for v in data:
+            macs += [m for m in collect_macs(v) if m not in macs]
+    return macs
+
+
+async def net_status(client) -&gt; dict:
+    """Aktiver Netzwerkstatus (LAN/WLAN, IP). Leer, wenn der TV ihn nicht liefert."""
+    try:
+        return await client.request("com.webos.service.connectionmanager/getStatus")
+    except Exception:  # noqa: BLE001
+        return {}
+
+
 def port_open(ip: str, port: int, timeout: float = 1.0) -&gt; bool:
     try:
         with socket.create_connection((ip, port), timeout=timeout):
@@ -330,11 +357,14 @@ def port_open(ip: str, port: int, timeout: float = 1.0) -&gt; bool:
         return False
 
 
-async def connect(cfg: dict, host: str | None = None, key: str | None = None):
+async def connect(cfg: dict, host: str | None = None, key: str | None = None, quiet: bool = False):
     WebOsClient = need_lib()
     host = host or cfg.get("host")
     if not host:
         die("Kein Fernseher bekannt. Erst 'python lgtv.py find' und 'python lgtv.py pair' ausführen.")
+    pairing = key == ""
+    if not pairing and not cfg.get("client_key"):
+        die("Noch nicht gekoppelt. Erst 'python lgtv.py pair' ausführen.")
     client = WebOsClient(host, key if key is not None else cfg.get("client_key"), connect_timeout=10)
     try:
         await client.connect()
@@ -343,9 +373,16 @@ async def connect(cfg: dict, host: str | None = None, key: str | None = None):
             await client.disconnect()
         except Exception:  # noqa: BLE001
             pass
-        if "Pair" in type(e).__name__:
-            die("Kopplung abgelehnt oder nicht rechtzeitig bestätigt (der TV wartet nur ca. 10 Sekunden). "
+        if quiet:
+            return None
+        if "Pair" in type(e).__name__ or (pairing and isinstance(e, (TimeoutError, asyncio.TimeoutError))):
+            die("Kopplung abgelehnt oder nicht rechtzeitig bestätigt (die Anfrage am TV verschwindet nach kurzer Zeit). "
                 "Fernbedienung bereithalten und 'pair' noch einmal ausführen.")
+        if pairing and port_open(host, 3001, 2) or pairing and port_open(host, 3000, 2):
+            die(f"Der TV ist erreichbar, die Kopplung ist aber abgebrochen ({type(e).__name__}: {e}).\n"
+                "Fernbedienung bereithalten und 'pair' noch einmal ausführen; am TV „Zulassen“ wählen.")
+        if isinstance(e, (TimeoutError, asyncio.TimeoutError)):
+            die(f"Zeitüberschreitung bei {host}. Ist der Fernseher an und im selben Netz?")
         die(f"Keine Verbindung zu {host} ({type(e).__name__}: {e}). Ist der Fernseher an und im selben Netz?")
     return client
 
@@ -390,15 +427,15 @@ async def cmd_pair(args) -&gt; None:
     client = await connect(cfg, key="")
     cfg["client_key"] = client.client_key
     sysinfo = client.tv_info.system or {}
-    conn = client.tv_info.connection or {}
-    mac = (conn.get("wiredInfo") or {}).get("macAddress") or (conn.get("wifiInfo") or {}).get("macAddress")
-    if mac:
-        cfg["mac"] = mac
+    macs = collect_macs(client.tv_info.connection or {}) or collect_macs(await net_status(client))
+    if macs:
+        cfg["macs"] = macs
+        cfg.pop("mac", None)
     cfg["model"] = sysinfo.get("modelName")
     save_config(cfg)
     await client.disconnect()
     print(f"Gekoppelt mit {cfg.get('model') or 'Fernseher'} ({cfg['host']}). Schlüssel gespeichert in {CONFIG}.")
-    if not mac:
+    if not macs:
         print("Hinweis: MAC-Adresse nicht ermittelt, 'on' und 'restart' brauchen sie (Option --mac).")
 
 
@@ -420,10 +457,25 @@ async def cmd_info(args) -&gt; None:
     await client.disconnect()
 
 
+def is_removable(app: dict) -&gt; bool:
+    """Vom Nutzer deinstallierbare App (keine System-App)."""
+    return bool(app.get("removable")) and not app.get("systemApp")
+
+
 async def cmd_apps(args) -&gt; None:
     client = await connect(load_config())
-    for app_id, app in sorted((client.tv_state.apps or {}).items(), key=lambda x: str(x[1].get("title", "")).lower()):
-        print(f"{app.get('title', '?'):35} {app_id}")
+    apps = sorted((client.tv_state.apps or {}).items(), key=lambda x: str(x[1].get("title", "")).lower())
+    if args.entfernbar:
+        apps = [(i, a) for i, a in apps if is_removable(a)]
+    shown = [(i, a) for i, a in apps if args.alle or args.entfernbar or a.get("visible", True)]
+    for app_id, app in shown:
+        mark = "entfernbar" if is_removable(app) else ""
+        print(f"{str(app.get('title', '?')):35} {mark:11} {app_id}")
+    removable = sum(1 for _, a in shown if is_removable(a))
+    print(f"\n{len(shown)} Apps angezeigt, davon {removable} entfernbar.")
+    if removable:
+        print("Entfernen geht nur am TV: Startseite › App-Leiste bearbeiten (Stift-Symbol) bzw.\n"
+              "App mit der OK-Taste gedrückt halten › Löschen. Die Schnittstelle erlaubt kein Deinstallieren.")
     await client.disconnect()
 
 
@@ -446,15 +498,19 @@ async def cmd_close(args) -&gt; None:
     if args.all:
         targets += [a for a in KNOWN_APPS.values() if a in installed and a not in targets
                     and a not in ("com.webos.app.livetv", "com.palm.app.settings")]
-    closed = []
+    closed, failed = [], []
     for app_id in targets:
+        title = installed.get(app_id, {}).get("title", app_id)
         try:
             await client.close_app(app_id)
-            closed.append(installed.get(app_id, {}).get("title", app_id))
-        except Exception:  # noqa: BLE001  (App lief nicht)
-            pass
+            closed.append(title)
+        except Exception as e:  # noqa: BLE001  (läuft nicht oder TV verweigert es)
+            if app_id == current:
+                failed.append(f"{title} ({e})")
     await client.button("HOME")
     print("Geschlossen: " + (", ".join(closed) if closed else "keine laufende App gefunden"))
+    if failed:
+        print("Nicht schließbar: " + ", ".join(failed) + ". Der Neustart ('restart') räumt sie trotzdem weg.")
     await client.disconnect()
 
 
@@ -475,38 +531,66 @@ async def cmd_text(args) -&gt; None:
     await client.disconnect()
 
 
+def get_macs(args, cfg: dict) -&gt; list[str]:
+    if args.mac:
+        return [args.mac]
+    return cfg.get("macs") or ([cfg["mac"]] if cfg.get("mac") else [])
+
+
+def wake(macs: list[str], host: str | None) -&gt; None:
+    for mac in macs:
+        send_wol(mac, host)
+
+
+async def tv_is_on(cfg: dict) -&gt; bool:
+    """Wirklich an? Mit Schnellstart+ antwortet der TV auch im Standby auf den Ports,
+    deshalb zählt der gemeldete Betriebszustand, nicht nur ein offener Port."""
+    client = await connect(cfg, quiet=True)
+    if client is None:
+        return False
+    await asyncio.sleep(1)  # Zustandsmeldungen abwarten
+    on = client.tv_state.is_on
+    await client.disconnect()
+    return on
+
+
 async def cmd_off(args) -&gt; None:
     client = await connect(load_config())
     await client.power_off()
+    await asyncio.sleep(1)
+    await client.disconnect()
     print("Fernseher ausgeschaltet.")
 
 
 def cmd_on(args) -&gt; None:
     cfg = load_config()
-    mac = args.mac or cfg.get("mac")
-    if not mac:
+    macs = get_macs(args, cfg)
+    if not macs:
         die("MAC-Adresse unbekannt. Mit --mac angeben (steht am TV unter Allgemein › Netzwerk).")
-    send_wol(mac, cfg.get("host"))
+    wake(macs, cfg.get("host"))
     print("Einschaltsignal gesendet. Klappt nur, wenn am TV „Über WLAN/LAN einschalten“ aktiv ist.")
 
 
 async def cmd_restart(args) -&gt; None:
     cfg = load_config()
-    mac = args.mac or cfg.get("mac")
-    if not mac:
+    macs = get_macs(args, cfg)
+    if not macs:
         die("MAC-Adresse unbekannt. Erst 'pair' ausführen oder --mac angeben.")
     client = await connect(cfg)
     await client.power_off()
+    await asyncio.sleep(1)
+    await client.disconnect()
     print(f"Ausgeschaltet. Warte {args.wait} Sekunden, damit webOS den Speicher freigibt …")
     await asyncio.sleep(args.wait)
     for _ in range(3):
-        send_wol(mac, cfg.get("host"))
+        wake(macs, cfg.get("host"))
         await asyncio.sleep(1)
-    for _ in range(30):
-        if port_open(cfg["host"], 3001) or port_open(cfg["host"], 3000):
+    for _ in range(20):
+        if await tv_is_on(cfg):
             print("Fernseher ist wieder an.")
             return
-        await asyncio.sleep(2)
+        wake(macs, cfg.get("host"))
+        await asyncio.sleep(3)
     print("Fernseher hat sich nicht gemeldet. Prüfe, ob „Über WLAN/LAN einschalten“ aktiv ist,\n"
           "oder schalte ihn mit der Fernbedienung ein.")
 
@@ -517,7 +601,10 @@ async def cmd_netcheck(args) -&gt; None:
     print(f"Pinge {host} 20-mal …")
     flag = "-n" if platform.system() == "Windows" else "-c"
     try:
-        out = subprocess.run(["ping", flag, "20", host], capture_output=True, text=True).stdout
+        # errors="replace": das deutsche Windows-ping schreibt in der OEM-Codepage („für“),
+        # die sich nicht als cp1252/UTF-8 lesen lässt und sonst einen Absturz auslöst.
+        out = subprocess.run(["ping", flag, "20", host], capture_output=True, text=True,
+                             errors="replace").stdout
     except FileNotFoundError:
         out = ""
         print("Programm 'ping' nicht gefunden, überspringe Messung der Antwortzeit.")
@@ -530,10 +617,17 @@ async def cmd_netcheck(args) -&gt; None:
         print(f"Antwortzeit: Ø {avg:.1f} ms, schlechteste {worst:.1f} ms")
     client = await connect(cfg)
     conn = client.tv_info.connection or {}
+    status = await net_status(client)
     await client.disconnect()
-    wired = (conn.get("wiredInfo") or {}).get("state") == "connected"
-    print(f"Verbindung des TVs: {'LAN-Kabel' if wired else 'WLAN'}")
-    print("Rohdaten vom TV:", json.dumps(conn, ensure_ascii=False))
+    wired_state = (status.get("wired") or conn.get("wiredInfo") or {}).get("state")
+    wifi = status.get("wifi") or conn.get("wifiInfo") or {}
+    if wired_state == "connected":
+        print("Verbindung des TVs: LAN-Kabel")
+    elif wifi.get("state") == "connected":
+        print("Verbindung des TVs: WLAN" + (f" ({wifi['ssid']})" if wifi.get("ssid") else ""))
+    else:
+        print("Verbindung des TVs: unbekannt (siehe Rohdaten)")
+    print("Rohdaten vom TV:", json.dumps(status or conn, ensure_ascii=False))
     verdict = "gut" if times else "ohne Ping-Messung nicht bewertbar"
     if loss_pct and loss_pct &gt; 2 or times and max(times) &gt; 150:
         verdict = "instabil: Router näher, 5-GHz-WLAN oder LAN-Kabel verwenden"
@@ -550,7 +644,9 @@ def main() -&gt; None:
     sp = sub.add_parser("pair", help="mit dem Fernseher koppeln (einmalig)")
     sp.add_argument("--host", help="IP-Adresse, falls 'find' nichts findet")
     sub.add_parser("info", help="Modell, Software, aktive App, Netzwerk")
-    sub.add_parser("apps", help="installierte Apps auflisten")
+    sp = sub.add_parser("apps", help="installierte Apps auflisten")
+    sp.add_argument("--entfernbar", action="store_true", help="nur deinstallierbare Apps")
+    sp.add_argument("--alle", action="store_true", help="auch ausgeblendete System-Apps")
     sp = sub.add_parser("launch", help="App starten, z. B. netflix, youtube, prime")
     sp.add_argument("app")
     sp = sub.add_parser("close", help="laufende App schließen")
@@ -592,7 +688,7 @@ if __name__ == "__main__":
     <div class="step-head"><span class="step-no">02</span><h2>Koppeln</h2></div>
     <p>Vorher am Fernseher einschalten, damit Claude Code ihn später auch wieder anschalten kann: <strong>Einstellungen › Allgemein › Geräte › Externe Geräte › TV einschalten mit Mobilgerät</strong> (je nach Baujahr auch „Mobile TV On“ oder „Über WLAN einschalten“).</p>
     <div class="prompt"><span class="prompt-label">An Claude Code</span><p class="prompt-text">Führe „python lgtv.py pair“ aus. Ich bestätige die Anfrage am Fernseher.</p><button type="button" class="copy">Kopieren</button></div>
-    <p class="tv-side">Am Fernseher erscheint eine Anfrage. Bestätige sie mit <strong>Zulassen</strong>. Der Fernseher wartet nur etwa 10 Sekunden, also Fernbedienung bereithalten. Danach ist der Schlüssel in deinem Benutzerordner gespeichert und es gibt keine Rückfragen mehr.</p>
+    <p class="tv-side">Am Fernseher erscheint eine Anfrage. Bestätige sie mit <strong>Zulassen</strong>. Die Anfrage verschwindet nach kurzer Zeit von selbst, also Fernbedienung bereithalten. Danach ist der Schlüssel in deinem Benutzerordner gespeichert und es gibt keine Rückfragen mehr.</p>
   </section>
 
   <section class="step" id="s3">

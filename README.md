@@ -13,7 +13,7 @@ Anleitung und Werkzeug, um einen LG-Fernseher mit webOS aufzuräumen und richtig
 ```sh
 pip install aiowebostv
 python tools/lgtv.py find        # Fernseher suchen
-python tools/lgtv.py pair        # einmalig koppeln, am TV „Zulassen“ drücken (ca. 10 s Zeit)
+python tools/lgtv.py pair        # einmalig koppeln, am TV „Zulassen“ drücken (Anfrage bitte zügig bestätigen)
 python tools/lgtv.py info | apps | launch netflix | close --all | key HOME | off | on | restart | netcheck
 ```
 
